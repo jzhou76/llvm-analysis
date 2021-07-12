@@ -42,6 +42,7 @@
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize.h"
+#include "llvm/Analysis/CheckedCGetObjSize.h"
 
 using namespace llvm;
 
@@ -159,6 +160,12 @@ static cl::opt<bool> EnableGVNSink(
 static cl::opt<bool>
     EnableCHR("enable-chr", cl::init(true), cl::Hidden,
               cl::desc("Enable control height reduction optimization (CHR)"));
+
+// Checked C related options
+static cl::opt<bool>
+CheckedCGetObjSize("get-obj-size", cl::init(false),
+                   cl::desc("Compute the size of struct and dynamically \
+                     allocated objects."));
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
@@ -751,6 +758,11 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createCanonicalizeAliasesPass());
     // Rename anon globals to be able to handle them in the summary
     MPM.add(createNameAnonGlobalPass());
+  }
+
+  // Analysis passes for the Checked C project
+  if (CheckedCGetObjSize) {
+    MPM.add(createCheckedCGetObjSizePass());
   }
 }
 
