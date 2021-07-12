@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/Analysis/CheckedCGetObjSize.h"
 
 using namespace llvm;
 
@@ -178,6 +179,13 @@ cl::opt<AttributorRunOption> AttributorRun(
                           "disable attributor runs")));
 
 extern cl::opt<bool> EnableKnowledgeRetention;
+
+// Checked C related options
+static cl::opt<bool>
+CheckedCGetObjSize("get-obj-size", cl::init(false),
+                   cl::desc("Compute the size of struct and dynamically \
+                     allocated objects."));
+
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
@@ -919,6 +927,11 @@ void PassManagerBuilder::populateModulePassManager(
   }
 
   MPM.add(createAnnotationRemarksLegacyPass());
+
+  // Analysis passes for the Checked C project
+  if (CheckedCGetObjSize) {
+    MPM.add(createCheckedCGetObjSizePass());
+  }
 }
 
 void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {

@@ -127,6 +127,8 @@ add_llvm_component_library(LLVMAnalysis
   ValueTracking.cpp
   VectorUtils.cpp
   VFABIDemangling.cpp
+  # Analysis passesfor Checked C
+  CheckedCGetObjSize.cpp
   ${GeneratedMLSources}
 
   ADDITIONAL_HEADER_DIRS
