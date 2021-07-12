@@ -11,7 +11,7 @@
 
 namespace llvm {
 
-class CheckedCGetObjSizePass : public FunctionPass {
+class CheckedCGetObjSizePass : public ModulePass {
 
 public:
   static char ID;
@@ -20,11 +20,11 @@ public:
 
   virtual StringRef getPassName() const override;
 
-  virtual bool runOnFunction(Function &F) override;
+  virtual bool runOnModule(Module &M) override;
 
 };
 
-FunctionPass *createCheckedCGetObjSizePass(void);
+ModulePass *createCheckedCGetObjSizePass(void);
 
 }
 
