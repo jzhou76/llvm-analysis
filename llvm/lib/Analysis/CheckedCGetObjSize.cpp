@@ -2,6 +2,7 @@
 //
 // This pass computes the size of each struct and dynamically allocated heap
 // object for the Checked C project.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CheckedCGetObjSize.h"
@@ -9,6 +10,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 
@@ -36,6 +38,10 @@ static void findLargestStruct(Module &M) {
   }
 
   // FIXME: Write the result to a file.
+  std::error_code EC;
+  std::string tmpFilePath = "/tmp/struct_size.txt";
+  raw_fd_ostream TmpFile(tmpFilePath, EC, sys::fs::OF_Append);
+  TmpFile << "Largest Struct: " << largestST << " bytes\n";
   errs() << "Largest Struct: " << largestST << " bytes\n";
 }
 

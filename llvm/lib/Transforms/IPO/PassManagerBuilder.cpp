@@ -759,11 +759,6 @@ void PassManagerBuilder::populateModulePassManager(
     // Rename anon globals to be able to handle them in the summary
     MPM.add(createNameAnonGlobalPass());
   }
-
-  // Analysis passes for the Checked C project
-  if (CheckedCGetObjSize) {
-    MPM.add(createCheckedCGetObjSizePass());
-  }
 }
 
 void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
@@ -1003,6 +998,11 @@ void PassManagerBuilder::populateLTOPassManager(legacy::PassManagerBase &PM) {
 
   if (VerifyOutput)
     PM.add(createVerifierPass());
+
+  // Analysis passes for the Checked C project
+  if (CheckedCGetObjSize) {
+    PM.add(createCheckedCGetObjSizePass());
+  }
 }
 
 inline PassManagerBuilder *unwrap(LLVMPassManagerBuilderRef P) {
