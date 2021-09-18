@@ -94,7 +94,7 @@ add_llvm_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
-  # Analysis passesfor Checked C
+  # Analysis passes for Checked C
   CheckedCGetObjSize.cpp
 
   ADDITIONAL_HEADER_DIRS
