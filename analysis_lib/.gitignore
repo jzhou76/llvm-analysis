@@ -2,3 +2,4 @@
 *.a
 *.s
 *.ll
+tests/hello

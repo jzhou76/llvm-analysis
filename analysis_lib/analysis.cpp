@@ -22,7 +22,10 @@ using namespace std;
 static map<uint64_t, uint64_t> heap_objs;
 
 // The size of each shared array of pointers.
-vector<size_t> array_sizes;
+static vector<size_t> array_sizes;
+
+// Size of largest heap object
+static size_t largest_obj = 0;
 
 //
 // Function: _record_obj_range().
@@ -36,6 +39,7 @@ void _record_obj_range(void *start, size_t size) {
   cout << "Adding range: " << (uint64_t)start << " - " << (uint64_t)start + size << "\n";
 #endif
   heap_objs[(uint64_t)start] = (uint64_t)start + size;
+  if (size > largest_obj) largest_obj = size;
 }
 
 //
@@ -88,6 +92,20 @@ void _find_array_size(void *p) {
     FOUND_PTR(addr);
 #endif
   }
+}
+
+//
+// Function: _dump_summary()
+// This function prints the summarized statistics.
+//
+void _dump_summary() {
+  size_t largest_arr = 0;
+  for (size_t size : array_sizes) {
+    if (size > largest_arr) largest_arr = size;
+  }
+
+  cout << "Size of largest heap object: " << largest_obj << "\n";
+  cout << "Size of the largest shared array of pointers: " << largest_arr << "\n";
 }
 
 #if defined __cplusplus
