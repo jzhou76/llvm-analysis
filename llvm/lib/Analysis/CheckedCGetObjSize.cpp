@@ -37,7 +37,7 @@ static void findLargestStruct(Module &M) {
     largestST = structSize > largestST ? structSize : largestST;
   }
 
-  // FIXME: Write the result to a file.
+  // Write the result to a file.
   std::error_code EC;
   std::string tmpFilePath = "/tmp/struct_size.txt";
   raw_fd_ostream TmpFile(tmpFilePath, EC, sys::fs::OF_Append);

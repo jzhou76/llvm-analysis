@@ -43,6 +43,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/Analysis/CheckedCGetObjSize.h"
+#include "llvm/Transforms/Instrumentation/CheckedCDynStats.h"
 
 using namespace llvm;
 
@@ -166,6 +167,10 @@ static cl::opt<bool>
 CheckedCGetObjSize("get-obj-size", cl::init(false),
                    cl::desc("Compute the size of struct and dynamically \
                      allocated objects."));
+
+static cl::opt<bool>
+CheckedCDynStats("marshal-array-size", cl::init(false),
+                cl::desc("Compute the sizes of shared arrays of pointers"));
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
@@ -840,6 +845,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   addInstructionCombiningPass(PM);
   addExtensionsToPM(EP_Peephole, PM);
 
+  // Run the marshal pass before inlining.
+  if (CheckedCDynStats) {
+    PM.add(createCheckedCDynStatsPass());
+  }
+
   // Inline small functions
   bool RunInliner = Inliner;
   if (RunInliner) {
@@ -1003,6 +1013,7 @@ void PassManagerBuilder::populateLTOPassManager(legacy::PassManagerBase &PM) {
   if (CheckedCGetObjSize) {
     PM.add(createCheckedCGetObjSizePass());
   }
+
 }
 
 inline PassManagerBuilder *unwrap(LLVMPassManagerBuilderRef P) {
