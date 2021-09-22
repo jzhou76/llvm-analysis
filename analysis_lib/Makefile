@@ -21,6 +21,10 @@ a: $(SRC)
 	$(AR) -rc $(LIB_ANALYSIS).a $(LIB_ANALYSIS).o
 	$(RANLIB) $(LIB_ANALYSIS).a
 
+debug: $(SRC)
+	$(CXX) $(CXXFLAGS) -DDEBUG=1 -c $(SRC) -o $(LIB_ANALYSIS).o
+	$(AR) -rc $(LIB_ANALYSIS).a $(LIB_ANALYSIS).o
+	$(RANLIB) $(LIB_ANALYSIS).a
 
 clean:
 	rm -rf *.o *.a *.s *.ll $(LIB_ANALYSIS)
