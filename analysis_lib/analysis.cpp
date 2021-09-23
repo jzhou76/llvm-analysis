@@ -120,9 +120,15 @@ void _cal_array_size(void *p) {
     }
   } else {
     // Addr is greater than the starting address of the obj that has the largest
-    // starting address.
-    range--;
-    array_sizes.push_back(range->second - addr);
+    // starting address. There are two possibilities. First, the target pointer
+    // points to the middle of the last object in the heap_objs. Second, the
+    // heap_objs is empty.
+    if (heap_objs.empty()) return;
+
+    auto last_obj = heap_objs.rbegin();
+    if (last_obj->second > addr) {
+      array_sizes.push_back(last_obj->second - addr);
+    }
 
 #ifdef DEBUG
     FOUND_PTR(addr);
@@ -144,8 +150,8 @@ void _dump_summary() {
   // a script that runs the experiment.
   const char *filename = "/tmp/analysis_result.txt";
   FILE *output = fopen(filename, "a");
-  fprintf(output, "Largest heap object: %lu\n", largest_obj);
-  fprintf(output, "Largest shared array of pointers: %lu\n", largest_arr);
+  fprintf(output, "Largest heap object: %zu\n", largest_obj);
+  fprintf(output, "Largest shared array of pointers: %zu\n", largest_arr);
   fclose(output);
 }
 
