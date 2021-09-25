@@ -6,7 +6,7 @@ LLVM_DIR := ../build
 CXX := $(LLVM_DIR)/bin/clang++
 AR := $(LLVM_DIR)/bin/llvm-ar
 RANLIB = $(LLVM_DIR)/bin/llvm-ranlib
-CXXFLAGS := -O3
+CXXFLAGS := -O3 -fPIC
 
 SRC := analysis.cpp
 LIB_ANALYSIS := libanalysis
