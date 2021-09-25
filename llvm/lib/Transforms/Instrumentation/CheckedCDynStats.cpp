@@ -41,7 +41,7 @@ std::unordered_set<std::string> MallocFns = {
 };
 
 static std::unordered_set<std::string> libFuncWL = {
-  "strtol", "strtod", "strtoul", "strtoull",
+  "strtol", "strtoll", "strtod", "strtoul", "strtoull",
   "execv", "execvp", "execle",
 };
 
@@ -125,7 +125,8 @@ static void handleMalloc(CallBase *Call) {
 //
 static void insertCallToStatSummary(Module &M) {
   Function *mainFn = M.getFunction("main");
-  assert(mainFn && "No main function found!");
+  // If this pass runs on a library, there would be no main function.
+  if (!mainFn) return;
   CallInst::Create(atexitFn.first, atexitFn.second, {dumpSummaryFn.second},
                    "", mainFn->front().getFirstNonPHI());
 }
@@ -167,6 +168,7 @@ static bool instrument(Module &M) {
             } else if (calleeName == "free") {
               frees.push_back(Call);
             } else {
+              if (libFuncWL.find(calleeName) != libFuncWL.end()) continue;
               // Analayze the arguments to find an array of pointers to pr
               for (unsigned i = 0; i < Call->arg_size(); i++) {
                 Value *arg = Call->getArgOperand(i);
@@ -195,8 +197,16 @@ static bool instrument(Module &M) {
       insertAfter(freeCall);
   }
 
-  // Instruemtn calls to library functions that take  an array of pointers.
-  // TODO
+  // Instruemtn calls to library functions that take an array of pointers.
+  Type *VoidPtrTy = Type::getInt8Ty(M.getContext())->getPointerTo();
+  for (auto callPtrArgs : callsToLibArrayPtrs) {
+    Instruction *Call = callPtrArgs.first;
+    for (Value *Ptr : callPtrArgs.second) {
+      Ptr = new BitCastInst(Ptr, VoidPtrTy, "", Call->getNextNonDebugInstruction());
+      CallInst::Create(calArraySizeFn.first, calArraySizeFn.second, {Ptr})->
+        insertAfter(cast<Instruction>(Ptr));
+    }
+  }
 
   // Insert a call to the summary-printing function to the end of main().
   insertCallToStatSummary(M);

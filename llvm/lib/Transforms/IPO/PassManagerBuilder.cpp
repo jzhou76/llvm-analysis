@@ -169,8 +169,8 @@ CheckedCGetObjSize("get-obj-size", cl::init(false),
                      allocated objects."));
 
 static cl::opt<bool>
-CheckedCDynStats("marshal-array-size", cl::init(false),
-                cl::desc("Compute the sizes of shared arrays of pointers"));
+CheckedCDynStats("collect-dyn-stats", cl::init(false),
+                cl::desc("Collect runtime statistics."));
 
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
