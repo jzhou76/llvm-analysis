@@ -142,7 +142,9 @@ void _cal_array_size(void *p) {
 //
 void _dump_summary() {
   size_t largest_arr = 0;
+  size_t arr_total = 0;
   for (size_t size : array_sizes) {
+    arr_total += size;
     if (size > largest_arr) largest_arr = size;
   }
 
@@ -152,6 +154,7 @@ void _dump_summary() {
   FILE *output = fopen(filename, "a");
   fprintf(output, "Largest heap object: %zu\n", largest_obj);
   fprintf(output, "Largest shared array of pointers: %zu\n", largest_arr);
+  fprintf(output, "Total shared array of pointers: %zu\n", arr_total);
   fclose(output);
 }
 
