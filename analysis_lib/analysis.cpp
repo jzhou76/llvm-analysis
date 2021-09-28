@@ -7,7 +7,10 @@
 #include <cstdint>
 #include <cassert>
 #include <iostream>
+#include <mutex>
 #include <stdio.h>
+#include <unistd.h>
+#include <execinfo.h>
 
 #define FOUND_PTR(addr) cout << "Found:\naddr = " << addr << ", size = "\
   << array_sizes.back() << "\n\n"
@@ -18,8 +21,14 @@ extern "C" {
 
 using namespace std;
 
+// Use mutex to provide atomic access to global variables.
+mutex objs_mutex;
+mutex arrays_mutex;
+mutex obj_mutex;
+mutex summary_mtx;
+
 // Address ranges of all live heap objects.
-static map<uint64_t, uint64_t> heap_objs;
+static map<uint64_t, size_t> heap_objs;
 
 // The size of each shared array of pointers.
 static vector<size_t> array_sizes;
@@ -28,6 +37,34 @@ static vector<size_t> array_sizes;
 static size_t largest_obj = 0;
 
 void _remove_obj_range(void *p);
+
+#ifdef DEBUG
+//
+// print_trace(): Dump the current call stack. Copy & pasted from:
+// https://www.gnu.org/software/libc/manual/html_node/Backtraces.html
+//
+void print_trace (void)
+{
+  void *array[10];
+  char **strings;
+  int size, i;
+
+  size = backtrace (array, 10);
+  strings = backtrace_symbols (array, size);
+  if (strings != NULL)
+  {
+
+    const char *filename = "/tmp/callstack.txt";
+    FILE *output = fopen(filename, "a");
+    fprintf(output, "Obtained %d stack frames.\n", size);
+    for (i = 0; i < size; i++)
+      fprintf(output, "%s\n", strings[i]);
+    fclose(output);
+  }
+
+  free (strings);
+}
+#endif
 
 //
 // Function: _record_alloc()
@@ -40,8 +77,15 @@ void _remove_obj_range(void *p);
 void _record_alloc(void *start, size_t size) {
   if (start == nullptr) return;  // Allocation failed.
 
+  unique_lock<mutex> lock(objs_mutex, defer_lock);
+  lock.lock();
   heap_objs[(uint64_t)start] = (uint64_t)start + size;
+  lock.unlock();
+
+  unique_lock<mutex> lock1(obj_mutex, defer_lock);
+  lock1.lock();
   if (size > largest_obj) largest_obj = size;
+  lock1.unlock();
 
 #ifdef DEBUG
   cout << "Adding range: " << (uint64_t)start << " - " << (uint64_t)start + size << "\n";
@@ -85,7 +129,10 @@ void _record_realloc(void *oldp, void *newp, size_t size) {
 // @param - p: starting address of the object
 //
 void _remove_obj_range(void *p) {
+  unique_lock<mutex> lock(objs_mutex, defer_lock);
+  lock.lock();
   heap_objs.erase((uint64_t)p);
+  lock.unlock();
 }
 
 //
@@ -101,18 +148,27 @@ void _cal_array_size(void *p) {
   cout << "Looking for " << addr << "\n";
 #endif
 
+  unique_lock<mutex> objs_lock(objs_mutex, defer_lock);
+  objs_lock.lock();
   auto range = heap_objs.lower_bound(addr);
   if (range != heap_objs.end()) {
     if (range->first == addr) {
       // Find the starting address of an object.
+
+      unique_lock<mutex> array_lock(arrays_mutex, defer_lock);
+      array_lock.lock();
       array_sizes.push_back(range->second - addr);
+      array_lock.unlock();
 #ifdef DEBUG
       FOUND_PTR(addr);
 #endif
     } else {
       if (--range != heap_objs.end() &&
           (addr >= range->first && addr < range->second)) {
+        unique_lock<mutex> lock(arrays_mutex, defer_lock);
+        lock.lock();
         array_sizes.push_back(range->second - addr);
+        lock.unlock();
 #ifdef DEBUG
         FOUND_PTR(addr);
 #endif
@@ -127,13 +183,17 @@ void _cal_array_size(void *p) {
 
     auto last_obj = heap_objs.rbegin();
     if (last_obj->second > addr) {
+      unique_lock<mutex> lock(arrays_mutex, defer_lock);
+      lock.lock();
       array_sizes.push_back(last_obj->second - addr);
+      lock.unlock();
     }
 
 #ifdef DEBUG
     FOUND_PTR(addr);
 #endif
   }
+  objs_lock.unlock();
 }
 
 //
@@ -151,11 +211,14 @@ void _dump_summary() {
   // Write the result to a temporary file. This file will be processed by
   // a script that runs the experiment.
   const char *filename = "/tmp/analysis_result.txt";
+  unique_lock<mutex> lock(summary_mtx, defer_lock);
+  lock.lock();
   FILE *output = fopen(filename, "a");
   fprintf(output, "Largest heap object: %zu\n", largest_obj);
   fprintf(output, "Largest shared array of pointers: %zu\n", largest_arr);
   fprintf(output, "Total shared array of pointers: %zu\n", arr_total);
   fclose(output);
+  lock.unlock();
 }
 
 #if defined __cplusplus
