@@ -210,7 +210,7 @@ void _dump_summary() {
 
   // Write the result to a temporary file. This file will be processed by
   // a script that runs the experiment.
-  const char *filename = "/tmp/analysis_result.txt";
+  const char *filename = "/tmp/analysis_result.stat";
   unique_lock<mutex> lock(summary_mtx, defer_lock);
   lock.lock();
   FILE *output = fopen(filename, "a");
