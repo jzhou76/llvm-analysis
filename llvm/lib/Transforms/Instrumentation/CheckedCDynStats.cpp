@@ -41,8 +41,13 @@ std::unordered_set<std::string> MallocFns = {
 };
 
 static std::unordered_set<std::string> libFuncWL = {
-  "strtol", "strtoll", "strtod", "strtoul", "strtoull",
-  "execv", "execvp", "execle",
+  "strtol", "strtoll", "strtod", "strtold", "strtoul", "strtoull", "strtok_r",
+  "strtoimax", "strtoumax",
+  "execv", "execvp", "execle", "execve",
+  "getaddrinfo", "getpwnam_r", "getpwuid_r", "getifaddrs",
+  "iconv", "posix_memalign",
+  "pthread_join",
+  "asprintf", "vasprintf",
 };
 
 // Runtime library functions that collects dynamic statistics.
@@ -143,9 +148,7 @@ static void insertCallToStatSummary(Module &M) {
 //
 static bool instrument(Module &M) {
   std::set<Function *> libFuncs;
-  std::unordered_map<Instruction*, std::vector<Value*>> callsToLibArrayPtrs;
-  // Map each malloc family call with the returned address and size.
-  std::map<CallBase*, std::pair<Value*, Value*>> mallocDataMap;
+  std::unordered_map<CallBase*, std::vector<Value*>> callsToLibArrayPtrs;
   std::vector<CallBase*> mallocs, frees;
 
   // Collect instrumentation sites.
@@ -210,6 +213,28 @@ static bool instrument(Module &M) {
 
   // Insert a call to the summary-printing function to the end of main().
   insertCallToStatSummary(M);
+
+  // Write the result to a file.
+  std::error_code EC;
+  std::string libFnFilePath = "/tmp/lib_fn.stat";
+  raw_fd_ostream libFnFile(libFnFilePath, EC, sys::fs::OF_Append);
+  if (!libFuncs.empty()) {
+    libFnFile << "Lib funtions:\n";
+    for (Function* Fn : libFuncs) {
+      libFnFile << Fn->getName() << "\n";
+    }
+  }
+  if (size_t callsitesNum = callsToLibArrayPtrs.size())
+    libFnFile << "Total call site: " << callsitesNum << "\n";
+
+#if 0
+  libFnFile << "Calls:\n";
+  for (auto callPtrArgs : callsToLibArrayPtrs) {
+    CallBase *Call = callPtrArgs.first;
+    libFnFile << Call->getFunction()->getName() << " calls " <<
+      Call->getCalledFunction()->getName() << "\n";
+  }
+#endif
 
   return !mallocs.empty() || !frees.empty() || !callsToLibArrayPtrs.empty();
 }
