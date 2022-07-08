@@ -26,6 +26,7 @@ mutex objs_mutex;
 mutex arrays_mutex;
 mutex obj_mutex;
 mutex summary_mtx;
+mutex heap_summary_mtx;
 
 // Address ranges of all live heap objects.
 static map<uint64_t, size_t> heap_objs;
@@ -35,6 +36,14 @@ static vector<size_t> array_sizes;
 
 // Size of largest heap object
 static size_t largest_obj = 0;
+
+// Summary for all heap objects.
+static struct Heap_Summary {
+  size_t alloc_num = 0;
+  size_t obj_over_4K = 0;
+  size_t mem_access_num = 0;
+  size_t mem_access_over_4K = 0;
+} heap_summary;
 
 void _remove_obj_range(void *p);
 
@@ -77,15 +86,24 @@ void print_trace (void)
 void _record_alloc(void *start, size_t size) {
   if (start == nullptr) return;  // Allocation failed.
 
+  // Update heap_objs
   unique_lock<mutex> lock(objs_mutex, defer_lock);
   lock.lock();
   heap_objs[(uint64_t)start] = (uint64_t)start + size;
   lock.unlock();
 
+  // Update largest_obj
   unique_lock<mutex> lock1(obj_mutex, defer_lock);
   lock1.lock();
   if (size > largest_obj) largest_obj = size;
   lock1.unlock();
+
+  // Update heap_summary
+  unique_lock<mutex> lock2(heap_summary_mtx, defer_lock);
+  lock2.lock();
+  heap_summary.alloc_num++;
+  if (size >= 4096) heap_summary.obj_over_4K++;
+  lock2.unlock();
 
 #ifdef DEBUG
   cout << "Adding range: " << (uint64_t)start << " - " << (uint64_t)start + size << "\n";
@@ -208,6 +226,8 @@ void _dump_summary() {
     if (size > largest_arr) largest_arr = size;
   }
 
+  size_t alloc_num = heap_summary.alloc_num, obj_over_4K = heap_summary.obj_over_4K;
+
   // Write the result to a temporary file. This file will be processed by
   // a script that runs the experiment.
   const char *filename = "/tmp/analysis_result.stat";
@@ -217,6 +237,14 @@ void _dump_summary() {
   fprintf(output, "Largest heap object: %zu\n", largest_obj);
   fprintf(output, "Largest shared array of pointers: %zu\n", largest_arr);
   fprintf(output, "Total shared array of pointers: %zu\n", arr_total);
+
+  if (alloc_num) {
+    fprintf(output, "Percentage of heap objects greater than 4K: %zu/%zu = %.2f\n",
+        obj_over_4K, alloc_num, obj_over_4K * 1.0 / alloc_num);
+  } else {
+    fprintf(output, "No heap objects allocated\n");
+  }
+
   fclose(output);
   lock.unlock();
 }
