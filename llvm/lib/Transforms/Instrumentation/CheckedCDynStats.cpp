@@ -43,8 +43,7 @@ std::unordered_set<std::string> MallocFns = {
 static std::unordered_set<std::string> libFuncWL = {
   "strtol", "strtoll", "strtod", "strtold", "strtoul", "strtoull", "strtok_r",
   "strtoimax", "strtoumax",
-  "execv", "execvp", "execle", "execve",
-  "getaddrinfo", "getpwnam_r", "getpwuid_r", "getifaddrs",
+  "getpwnam_r", "getpwuid_r", "getifaddrs",
   "iconv", "posix_memalign",
   "pthread_join",
   "asprintf", "vasprintf",
